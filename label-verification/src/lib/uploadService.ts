@@ -16,7 +16,8 @@ export async function uploadAndExtractText(file: File): Promise<string> {
   
   // 2. Poll for Cloud Vision Extension results
   // Extension creates document with random ID but stores file path in 'file' field
-  const expectedFilePath = `gs://label-varification.firebasestorage.app/${storagePath}`;
+  const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '';
+  const expectedFilePath = `gs://${storageBucket}/${storagePath}`;
   console.log('Looking for file path:', expectedFilePath);
   
   return new Promise((resolve, reject) => {
