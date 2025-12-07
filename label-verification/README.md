@@ -2,8 +2,6 @@
 
 A full-stack web application that simulates the Alcohol and Tobacco Tax and Trade Bureau (TTB) label approval process. The system allows users to submit alcohol beverage labels along with product information, then uses Google OCR and automated verification to ensure the label matches the submitted data and complies with TTB regulations.
 
-![TTB Logo](public/Logo.png)
-
 ## 🌟 Features
 
 ### **Authentication & User Management**
