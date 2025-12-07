@@ -20,7 +20,10 @@ export default function Home() {
     if (user) {
       const hasSeenOnboarding = localStorage.getItem(`onboarding-seen-${user.uid}`);
       if (!hasSeenOnboarding) {
-        setIsOnboardingOpen(true);
+        // Defer state update to avoid cascading renders
+        setTimeout(() => {
+          setIsOnboardingOpen(true);
+        }, 0);
       }
     }
   }, [user]);

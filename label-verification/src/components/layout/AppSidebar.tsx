@@ -65,21 +65,8 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           
-          {/* Bottom Section - Profile and Logout at the very bottom */}
+          {/* Bottom Section - Logout at the very bottom */}
           <div className="flex flex-col gap-3 mt-auto pb-4">
-            {/* Profile avatar */}
-            <SidebarLink
-              link={{
-                label: userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : "Profile",
-                href: "/profile",
-                icon: (
-                  <div className="h-7 w-7 flex-shrink-0 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-xs font-semibold">
-                    {userProfile ? userProfile.firstName[0] + userProfile.lastName[0] : "PR"}
-                  </div>
-                ),
-              }}
-            />
-            
             {/* Logout Button - Now at the absolute bottom */}
             <button
               onClick={handleLogout}
