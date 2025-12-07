@@ -34,21 +34,11 @@ A full-stack web application that simulates the Alcohol and Tobacco Tax and Trad
 - 📚 Helps with TTB labeling rules and requirements
 - 🧠 Persistent conversation history per user
 - ⚡ Real-time responses with typing indicators
-- 🎨 Beautiful slide-out panel interface
 
 ### **Onboarding & Help**
 - 🎠 Interactive onboarding carousel for first-time users
 - 📖 "How It Works" guide accessible anytime
 - 🖼️ Step-by-step visual instructions with smooth transitions
-
-### **Modern UI/UX**
-- 🎨 Stripe-inspired clean, minimal design
-- 🏛️ Government aesthetic with professional styling
-- 📱 Fully responsive across all devices
-- 🌊 Smooth animations with Framer Motion
-- 🎯 Custom dropdown components with animated selection
-- 🗂️ Collapsible sidebar navigation
-- 🔔 Real-time status banners for user feedback
 
 ## 🛠️ Tech Stack
 
@@ -58,7 +48,6 @@ A full-stack web application that simulates the Alcohol and Tobacco Tax and Trad
 - **Styling:** Tailwind CSS
 - **Animations:** Framer Motion
 - **Icons:** Lucide React
-- **UI Components:** Custom-built with shadcn/ui patterns
 
 ### **Backend & Services**
 - **Authentication:** Firebase Authentication (Email/Password)
@@ -269,22 +258,6 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 5. **Scoring** → Generates a 0-100% verification score
 6. **Results** → Provides detailed pass/fail/warning messages for each field
 
-## 🎨 Design Philosophy
-
-- **Stripe-inspired UI:** Clean, minimal, and professional
-- **Government aesthetic:** Trust-building design with official TTB branding
-- **Mobile-first:** Responsive design that works on all devices
-- **Accessibility:** Keyboard navigation, ARIA labels, and screen reader support
-- **Performance:** Optimized images, lazy loading, and efficient data fetching
-
-## 🔐 Security Features
-
-- Firebase Authentication for secure user management
-- Protected API routes and client-side route guards
-- Environment variables for sensitive credentials
-- Firestore security rules for data isolation
-- User-specific data storage (submissions, conversations)
-
 ## 📦 Dependencies
 
 ### Core
@@ -295,41 +268,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ### Firebase
 - `firebase` - Backend services
 
-### UI & Animations
-- `tailwindcss` - Utility-first CSS
-- `framer-motion` - Animations
-- `lucide-react` - Icons
-- `clsx` & `tailwind-merge` - Class name utilities
-
-### AI & Services
-- `openai` - AI assistant integration
-- `jspdf` - PDF generation
-
-## 🚧 Future Enhancements
-
-- [ ] Email notifications for submission status changes
-- [ ] Admin dashboard for TTB agents
-- [ ] Batch label processing
-- [ ] Historical compliance tracking
-- [ ] Advanced analytics dashboard
-- [ ] Mobile app (React Native)
-- [ ] Integration with TTB's COLAs system
-
 ## 📄 License
 
 This is a demonstration project for educational purposes.
-
-## 🤝 Contributing
-
-This is a private project. For questions or suggestions, please contact the development team.
-
-## 📞 Support
-
-For help with the application:
-- Use the Lisa AI Assistant (in-app)
-- Check TTB official guidelines at [ttb.gov](https://www.ttb.gov)
-- Contact your system administrator
-
 ---
 
 **Built with ❤️ for the Alcohol and Tobacco Tax and Trade Bureau**
