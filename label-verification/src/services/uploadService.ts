@@ -65,8 +65,12 @@ export async function uploadAndExtractText(file: File): Promise<string> {
           console.log('✅ OCR successful! Returning text.');
           resolve(extractedText);
           return;
-        } else if (docFound && !resolved) {
-          console.warn('Document exists but text field is empty');
+        } else if (docFound && extractedText.trim().length === 0 && !resolved) {
+          // Document found but no text detected
+          resolved = true;
+          console.warn('⚠️ Document found but no text detected in image');
+          reject(new Error('NO_TEXT_DETECTED'));
+          return;
         }
         
         // Continue polling if not resolved and haven't exceeded max polls

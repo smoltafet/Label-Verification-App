@@ -70,11 +70,11 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
             {/* Profile avatar */}
             <SidebarLink
               link={{
-                label: userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : "TTB Agent",
+                label: userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : "Profile",
                 href: "/profile",
                 icon: (
                   <div className="h-7 w-7 flex-shrink-0 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-xs font-semibold">
-                    {userProfile ? userProfile.firstName[0] + userProfile.lastName[0] : "TA"}
+                    {userProfile ? userProfile.firstName[0] + userProfile.lastName[0] : "PR"}
                   </div>
                 ),
               }}

@@ -106,6 +106,29 @@ export default function VerificationForm() {
     setValidationInfo([]);
   };
 
+  // Check if all required fields are filled
+  const isFormValid = () => {
+    // Must have an image
+    if (!selectedImage) return false;
+    
+    // Must have product category
+    if (!formData.productCategory) return false;
+    
+    // Common required fields for all categories
+    if (!formData.brandName.trim()) return false;
+    if (!formData.productType.trim()) return false;
+    if (!formData.alcoholContent.trim()) return false;
+    if (!formData.netContents.trim()) return false;
+    if (!formData.healthWarning.trim()) return false;
+    
+    // Category-specific required fields
+    if (formData.productCategory === PRODUCT_TYPES.WINE) {
+      if (!formData.sulfiteDeclaration.trim()) return false;
+    }
+    
+    return true;
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setHasSubmitted(true);
@@ -126,7 +149,15 @@ export default function VerificationForm() {
 
     try {
       // 1. Upload image and wait for Firebase Extension OCR
-      const extractedText = await uploadAndExtractText(selectedImage);
+      let extractedText = '';
+      try {
+        extractedText = await uploadAndExtractText(selectedImage);
+      } catch (error: any) {
+        if (error.message === 'NO_TEXT_DETECTED') {
+          throw new Error('No text detected on the uploaded image. Please upload a label with visible text.');
+        }
+        throw error;
+      }
       
       if (!extractedText || extractedText.trim().length === 0) {
         throw new Error('Could not read text from the label image. Please try a clearer image.');
@@ -544,8 +575,8 @@ export default function VerificationForm() {
           <div className="mt-8 pt-6 border-t border-[#dee2e6]">
             <button
               type="submit"
-              disabled={!formData.productCategory || loading}
-              className="bg-[#5cb85c] text-white px-8 py-3 rounded-md font-medium hover:bg-[#449d44] focus:outline-none focus:ring-2 focus:ring-[#003d7a] focus:ring-offset-2 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
+              disabled={!isFormValid() || loading}
+              className="bg-[#5cb85c] text-white px-8 py-3 rounded-md font-medium hover:bg-[#449d44] focus:outline-none focus:ring-2 focus:ring-[#003d7a] focus:ring-offset-2 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed disabled:hover:bg-gray-400"
             >
               {loading ? 'Processing...' : 'Submit for Verification'}
             </button>

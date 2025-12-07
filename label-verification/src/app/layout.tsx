@@ -16,6 +16,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "TTB Label Verification System",
   description: "Verify alcohol beverage labels against submitted product information",
+  icons: {
+    icon: '/Logo.png',
+    apple: '/Logo.png',
+  },
 };
 
 export default function RootLayout({

@@ -71,7 +71,7 @@ export default function ImageUpload({ onImageSelect, selectedImage }: ImageUploa
       
       {!preview ? (
         <div
-          className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+          className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
             dragActive
               ? 'border-[#003d7a] bg-blue-50'
               : 'border-[#dee2e6] hover:border-[#003d7a] bg-white'
@@ -80,6 +80,7 @@ export default function ImageUpload({ onImageSelect, selectedImage }: ImageUploa
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
           onDrop={handleDrop}
+          onClick={handleButtonClick}
         >
           <input
             ref={inputRef}
@@ -89,7 +90,7 @@ export default function ImageUpload({ onImageSelect, selectedImage }: ImageUploa
             onChange={handleChange}
           />
           
-          <div className="flex flex-col items-center space-y-3">
+          <div className="flex flex-col items-center space-y-3 pointer-events-none">
             <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
               <svg
                 className="w-6 h-6 text-[#6c757d]"
@@ -107,13 +108,9 @@ export default function ImageUpload({ onImageSelect, selectedImage }: ImageUploa
             </div>
             <div>
               <p className="text-sm text-[#212529] mb-1">
-                <button
-                  type="button"
-                  onClick={handleButtonClick}
-                  className="text-[#003d7a] font-medium hover:underline"
-                >
+                <span className="text-[#003d7a] font-medium">
                   Click to upload
-                </button>
+                </span>
                 {' '}or drag and drop
               </p>
               <p className="text-xs text-[#6c757d]">

@@ -4,10 +4,18 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/layout/Header';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute';
-import { FileText, Download, Eye, Search } from 'lucide-react';
+import { FileText, Download, Eye, Search, X, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { firestore } from '@/services/firebase';
+import { AnimatePresence, motion } from 'framer-motion';
+import { jsPDF } from 'jspdf';
+
+interface VerificationResult {
+  field: string;
+  status: 'pass' | 'fail' | 'warning';
+  message: string;
+}
 
 interface Submission {
   id: string;
@@ -19,6 +27,9 @@ interface Submission {
   alcoholContent: string;
   netContents: string;
   verificationScore: number;
+  results?: VerificationResult[];
+  extractedText?: string;
+  userName?: string;
 }
 
 export default function SubmissionsPage() {
@@ -27,6 +38,7 @@ export default function SubmissionsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
 
   const fetchSubmissions = async () => {
     if (!user) return;
@@ -106,6 +118,161 @@ export default function SubmissionsPage() {
       day: 'numeric',
       year: 'numeric'
     }).format(date);
+  };
+
+  const handleViewSubmission = (submission: Submission) => {
+    setSelectedSubmission(submission);
+  };
+
+  const getStatusIcon = (status: 'pass' | 'fail' | 'warning') => {
+    switch (status) {
+      case 'pass':
+        return <CheckCircle className="h-5 w-5 text-green-600" />;
+      case 'fail':
+        return <XCircle className="h-5 w-5 text-red-600" />;
+      case 'warning':
+        return <AlertCircle className="h-5 w-5 text-yellow-600" />;
+    }
+  };
+
+  const getResultStatusColor = (status: 'pass' | 'fail' | 'warning') => {
+    switch (status) {
+      case 'pass':
+        return 'bg-green-50 border-green-200';
+      case 'fail':
+        return 'bg-red-50 border-red-200';
+      case 'warning':
+        return 'bg-yellow-50 border-yellow-200';
+    }
+  };
+
+  const downloadPDF = (submission: Submission) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    let yPosition = margin;
+
+    // Helper function to add text with auto-wrapping
+    const addText = (text: string, fontSize: number = 10, isBold: boolean = false) => {
+      doc.setFontSize(fontSize);
+      doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+      
+      const lines = doc.splitTextToSize(text, pageWidth - (margin * 2));
+      
+      // Check if we need a new page
+      if (yPosition + (lines.length * fontSize * 0.5) > pageHeight - margin) {
+        doc.addPage();
+        yPosition = margin;
+      }
+      
+      doc.text(lines, margin, yPosition);
+      yPosition += lines.length * fontSize * 0.5 + 5;
+    };
+
+    const addSpace = (space: number = 5) => {
+      yPosition += space;
+    };
+
+    // Header
+    doc.setFillColor(0, 61, 122); // #003d7a
+    doc.rect(0, 0, pageWidth, 30, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TTB Label Verification Report', margin, 20);
+    
+    yPosition = 40;
+    doc.setTextColor(0, 0, 0);
+
+    // Overall Status
+    addText('OVERALL STATUS', 14, true);
+    addText(`Status: ${submission.status}`);
+    addText(`Verification Score: ${submission.verificationScore}%`);
+    addText(`Submitted: ${formatDate(submission.submittedAt)}`);
+    addSpace(10);
+
+    // Product Information
+    addText('PRODUCT INFORMATION', 14, true);
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, yPosition, pageWidth - margin, yPosition);
+    yPosition += 5;
+    
+    addText(`Category: ${submission.productCategory}`, 10, true);
+    addText(`Brand Name: ${submission.brandName}`);
+    addText(`Product Type: ${submission.productType}`);
+    addText(`Alcohol Content: ${submission.alcoholContent}% ABV`);
+    addText(`Net Contents: ${submission.netContents}`);
+    if (submission.userName) {
+      addText(`Submitted By: ${submission.userName}`);
+    }
+    addSpace(10);
+
+    // Verification Results
+    if (submission.results && submission.results.length > 0) {
+      addText('VERIFICATION RESULTS & DISCREPANCIES', 14, true);
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 5;
+      
+      submission.results.forEach((result, index) => {
+        // Status indicator
+        const statusSymbol = result.status === 'pass' ? '✓' : result.status === 'fail' ? '✗' : '⚠';
+        const statusColor = result.status === 'pass' ? [34, 197, 94] : result.status === 'fail' ? [239, 68, 68] : [234, 179, 8];
+        
+        doc.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
+        addText(`${statusSymbol} ${result.field}`, 11, true);
+        
+        doc.setTextColor(0, 0, 0);
+        addText(`   ${result.message}`, 10, false);
+        addSpace(3);
+      });
+      
+      addSpace(10);
+    }
+
+    // Extracted Text
+    if (submission.extractedText) {
+      addText('EXTRACTED TEXT FROM LABEL', 14, true);
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 5;
+      
+      doc.setFontSize(8);
+      doc.setFont('courier', 'normal');
+      const extractedLines = doc.splitTextToSize(submission.extractedText, pageWidth - (margin * 2));
+      
+      extractedLines.forEach((line: string) => {
+        if (yPosition > pageHeight - margin) {
+          doc.addPage();
+          yPosition = margin;
+        }
+        doc.text(line, margin, yPosition);
+        yPosition += 4;
+      });
+    }
+
+    // Footer
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(128, 128, 128);
+      doc.text(
+        `Page ${i} of ${totalPages} | Generated on ${new Date().toLocaleString()}`,
+        pageWidth / 2,
+        pageHeight - 10,
+        { align: 'center' }
+      );
+      doc.text(
+        '© 2025 Alcohol and Tobacco Tax and Trade Bureau (TTB)',
+        pageWidth / 2,
+        pageHeight - 5,
+        { align: 'center' }
+      );
+    }
+
+    // Save the PDF
+    const fileName = `TTB_Verification_${submission.brandName.replace(/\s+/g, '_')}_${submission.id.substring(0, 8)}.pdf`;
+    doc.save(fileName);
   };
 
   return (
@@ -252,10 +419,18 @@ export default function SubmissionsPage() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                               <div className="flex gap-2">
-                                <button className="p-2 text-[#003d7a] hover:bg-[#003d7a] hover:text-white rounded-lg transition-colors">
+                                <button 
+                                  onClick={() => handleViewSubmission(submission)}
+                                  className="p-2 text-[#003d7a] hover:bg-[#003d7a] hover:text-white rounded-lg transition-colors"
+                                  title="View Details"
+                                >
                                   <Eye className="h-4 w-4" />
                                 </button>
-                                <button className="p-2 text-[#003d7a] hover:bg-[#003d7a] hover:text-white rounded-lg transition-colors">
+                                <button 
+                                  onClick={() => downloadPDF(submission)}
+                                  className="p-2 text-[#003d7a] hover:bg-[#003d7a] hover:text-white rounded-lg transition-colors" 
+                                  title="Download Report"
+                                >
                                   <Download className="h-4 w-4" />
                                 </button>
                               </div>
@@ -269,6 +444,167 @@ export default function SubmissionsPage() {
               )}
             </div>
           </main>
+
+          {/* Submission Details Modal */}
+          <AnimatePresence>
+            {selectedSubmission && (
+              <>
+                {/* Backdrop */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setSelectedSubmission(null)}
+                  className="fixed inset-0 bg-black/50 z-50"
+                />
+
+                {/* Modal */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                  transition={{ type: 'spring', duration: 0.3 }}
+                  className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+                >
+                  <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden pointer-events-auto">
+                    {/* Modal Header */}
+                    <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-[#003d7a]">
+                      <div>
+                        <h2 className="text-2xl font-semibold text-white">
+                          Verification Details
+                        </h2>
+                        <p className="text-sm text-blue-100 mt-1">
+                          {selectedSubmission.brandName} - {selectedSubmission.productType}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setSelectedSubmission(null)}
+                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                      >
+                        <X className="h-6 w-6 text-white" />
+                      </button>
+                    </div>
+
+                    {/* Modal Body */}
+                    <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+                      {/* Overall Status */}
+                      <div className={`mb-6 p-4 rounded-lg border-2 ${getStatusColor(selectedSubmission.status)}`}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              Overall Status: {selectedSubmission.status}
+                            </h3>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Verification Score: {selectedSubmission.verificationScore}%
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-gray-600">Submitted</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {formatDate(selectedSubmission.submittedAt)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Product Information */}
+                      <div className="mb-6">
+                        <h4 className="text-lg font-semibold text-gray-900 mb-4">Product Information</h4>
+                        <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase">Category</p>
+                            <p className="text-sm font-medium text-gray-900">{selectedSubmission.productCategory}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase">Brand Name</p>
+                            <p className="text-sm font-medium text-gray-900">{selectedSubmission.brandName}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase">Product Type</p>
+                            <p className="text-sm font-medium text-gray-900">{selectedSubmission.productType}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase">Alcohol Content</p>
+                            <p className="text-sm font-medium text-gray-900">{selectedSubmission.alcoholContent}% ABV</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase">Net Contents</p>
+                            <p className="text-sm font-medium text-gray-900">{selectedSubmission.netContents}</p>
+                          </div>
+                          {selectedSubmission.userName && (
+                            <div>
+                              <p className="text-xs text-gray-500 uppercase">Submitted By</p>
+                              <p className="text-sm font-medium text-gray-900">{selectedSubmission.userName}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Verification Results */}
+                      {selectedSubmission.results && selectedSubmission.results.length > 0 && (
+                        <div className="mb-6">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                            Verification Results & Discrepancies
+                          </h4>
+                          <div className="space-y-3">
+                            {selectedSubmission.results.map((result, index) => (
+                              <div
+                                key={index}
+                                className={`flex items-start gap-3 p-4 rounded-lg border ${getResultStatusColor(result.status)}`}
+                              >
+                                <div className="flex-shrink-0 mt-0.5">
+                                  {getStatusIcon(result.status)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h5 className="text-sm font-semibold text-gray-900 mb-1">
+                                    {result.field}
+                                  </h5>
+                                  <p className="text-sm text-gray-700">
+                                    {result.message}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Extracted Text */}
+                      {selectedSubmission.extractedText && (
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                            Extracted Text from Label
+                          </h4>
+                          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 max-h-60 overflow-y-auto">
+                            <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono">
+                              {selectedSubmission.extractedText}
+                            </pre>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Modal Footer */}
+                    <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+                      <button
+                        onClick={() => setSelectedSubmission(null)}
+                        className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                      >
+                        Close
+                      </button>
+                      <button 
+                        onClick={() => downloadPDF(selectedSubmission)}
+                        className="px-4 py-2 bg-[#003d7a] text-white rounded-lg hover:bg-[#1e3a5f] transition-colors flex items-center gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download Report
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
 
           <footer className="py-6 border-t border-gray-300 bg-[#003d7a] text-white mt-auto">
             <div className="max-w-7xl mx-auto px-6">

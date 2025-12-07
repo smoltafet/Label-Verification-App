@@ -200,8 +200,12 @@ export function LisaAssistant({ isOpen, onClose }: LisaAssistantProps) {
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-white" />
+                <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white shadow-md bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
+                  <img
+                    src="/lisa.png"
+                    alt="Lisa"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <span className="font-semibold text-gray-900">Lisa</span>
               </div>
@@ -238,11 +242,18 @@ export function LisaAssistant({ isOpen, onClose }: LisaAssistantProps) {
               ) : messages.length === 0 ? (
                 <>
                   {/* Greeting */}
-                  <div className="mb-8">
-                    <h2 className="text-2xl font-normal text-gray-900 mb-2">
-                      Hello, <span className="font-semibold">{userProfile?.firstName || 'Agent'}</span>
+                  <div className="mb-8 text-center">
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
+                      <img
+                        src="/lisa.png"
+                        alt="Lisa"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                      Hello! I'm Lisa, your TTB Assistant
                     </h2>
-                    <p className="text-xl text-gray-600">
+                    <p className="text-lg text-gray-600">
                       How can I help you?
                     </p>
                   </div>
@@ -283,8 +294,12 @@ export function LisaAssistant({ isOpen, onClose }: LisaAssistantProps) {
                         <div className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                           {/* Avatar */}
                           {msg.role === 'assistant' && (
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
-                              <Sparkles className="w-3.5 h-3.5 text-white" />
+                            <div className="w-7 h-7 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center flex-shrink-0">
+                              <img
+                                src="/lisa.png"
+                                alt="Lisa"
+                                className="w-full h-full object-cover"
+                              />
                             </div>
                           )}
                           
@@ -311,8 +326,12 @@ export function LisaAssistant({ isOpen, onClose }: LisaAssistantProps) {
                     {isSending && (
                       <div className="flex justify-start">
                         <div className="flex gap-3">
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                            <Sparkles className="w-3.5 h-3.5 text-white" />
+                          <div className="w-7 h-7 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
+                            <img
+                              src="/lisa.png"
+                              alt="Lisa"
+                              className="w-full h-full object-cover"
+                            />
                           </div>
                           <div className="bg-gray-100 rounded-2xl px-4 py-3">
                             <div className="flex gap-1">
