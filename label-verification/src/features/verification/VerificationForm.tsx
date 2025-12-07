@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-import ImageUpload from './ImageUpload';
-import StatusBanner from './StatusBanner';
-import CategorySelector from './CategorySelector';
+import ImageUpload from '@/components/forms/ImageUpload';
+import StatusBanner from '@/components/shared/StatusBanner';
+import { ProductCategoryDropdown } from '@/components/ui/fluid-dropdown';
 import VerificationResultsPanel from './VerificationResultsPanel';
-import { uploadAndExtractText } from '@/lib/uploadService';
-import { verifyLabel, VerificationReport } from '@/lib/verificationLogic';
+import { uploadAndExtractText } from '@/services/uploadService';
+import { verifyLabel, VerificationReport } from '@/services/verificationLogic';
+import { useAuth } from '@/features/auth/AuthContext';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { firestore } from '@/services/firebase';
 import {
   PRODUCT_TYPES,
   ProductType,
@@ -16,7 +19,7 @@ import {
   BEER_RULES,
   DISTILLED_SPIRITS_RULES,
   HEALTH_WARNING_TEXT,
-} from '../constants/ttb-rules';
+} from '@/app/constants/ttb-rules';
 
 interface FormData {
   productCategory: ProductType | '';
@@ -36,6 +39,7 @@ interface FormData {
 }
 
 export default function VerificationForm() {
+  const { user, userProfile } = useAuth();
   const [formData, setFormData] = useState<FormData>({
     productCategory: '',
     brandName: '',
@@ -56,9 +60,15 @@ export default function VerificationForm() {
   const [validationInfo, setValidationInfo] = useState<string[]>([]);
   const [verificationResults, setVerificationResults] = useState<VerificationReport | null>(null);
   const [loading, setLoading] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false); // Track if form has been submitted
+
+  const handleImageSelect = (file: File | null) => {
+    setSelectedImage(file);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -87,10 +97,10 @@ export default function VerificationForm() {
     }
   };
 
-  const handleCategoryChange = (category: ProductType) => {
+  const handleCategoryChange = (categoryId: string) => {
     setFormData({
       ...formData,
-      productCategory: category,
+      productCategory: categoryId as ProductType,
       productType: '', // Reset product type when category changes
     });
     setValidationInfo([]);
@@ -98,51 +108,15 @@ export default function VerificationForm() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setHasSubmitted(true);
 
-    // Basic validation
-    if (!formData.productCategory) {
-      setStatus({
-        type: 'error',
-        message: 'Please select a product category.',
-      });
-      return;
-    }
-
-    if (!formData.brandName || !formData.productType || !formData.alcoholContent) {
-      setStatus({
-        type: 'error',
-        message: 'Please fill in all required fields.',
-      });
-      return;
-    }
-
-    // Category-specific validation
-    if (formData.productCategory === PRODUCT_TYPES.WINE && !formData.sulfiteDeclaration) {
-      setStatus({
-        type: 'error',
-        message: 'Wine labels require a sulfite declaration.',
-      });
-      return;
-    }
-
-    if (formData.productCategory === PRODUCT_TYPES.DISTILLED_SPIRITS) {
-      const abv = parseFloat(formData.alcoholContent);
-      const validation = validateDistilledSpiritsABV(abv);
-      if (!validation.valid) {
-        setStatus({
-          type: 'error',
-          message: validation.message || 'Invalid ABV for distilled spirits.',
-        });
-        return;
-      }
-    }
-
+    // Skip all validation - just proceed if we have an image
     if (!selectedImage) {
-      setStatus({
-        type: 'error',
-        message: 'Please upload a label image.',
-      });
-      return;
+      return; // Silently return if no image
+    }
+
+    if (!user) {
+      return; // Silently return if not logged in
     }
 
     // Start Firebase OCR and verification
@@ -163,21 +137,70 @@ export default function VerificationForm() {
       
       // 3. Display results
       setVerificationResults(results);
+
+      // 4. Calculate score
+      const passedChecks = results.results.filter(c => c.status === 'pass').length;
+      const totalChecks = results.results.length;
+      const score = Math.round((passedChecks / totalChecks) * 100);
+
+      // 5. Determine overall status
+      const overallStatus = results.overallStatus === 'approved' ? 'Approved' : 
+                           results.overallStatus === 'rejected' ? 'Rejected' : 'Pending';
+
+      // 6. Save submission to Firestore under user's subcollection
+      console.log('💾 Attempting to save submission to Firestore...');
+      console.log('User ID:', user.uid);
+      console.log('User Profile:', userProfile);
+      
+      try {
+        const submissionData = {
+          userName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Unknown',
+          brandName: formData.brandName,
+          productType: formData.productType,
+          productCategory: formData.productCategory,
+          alcoholContent: formData.alcoholContent,
+          netContents: formData.netContents,
+          sulfiteDeclaration: formData.sulfiteDeclaration || null,
+          ingredients: formData.ingredients || null,
+          ageStatement: formData.ageStatement || null,
+          distillerName: formData.distillerName || null,
+          healthWarning: formData.healthWarning || null,
+          extractedText: extractedText,
+          verificationScore: score,
+          status: overallStatus,
+          results: results.results,
+          submittedAt: serverTimestamp(),
+          imageUrl: null,
+        };
+        
+        console.log('📝 Submission data:', submissionData);
+        
+        // Save to: users/{userId}/submissions/{submissionId}
+        const userSubmissionsRef = collection(firestore, 'users', user.uid, 'submissions');
+        const docRef = await addDoc(userSubmissionsRef, submissionData);
+        
+        console.log('✅ Submission saved to users/' + user.uid + '/submissions/' + docRef.id);
+      } catch (firestoreError: any) {
+        console.error('❌ Firestore save error:', firestoreError);
+        console.error('Error code:', firestoreError.code);
+        console.error('Error message:', firestoreError.message);
+        throw new Error(`Failed to save submission: ${firestoreError.message}`);
+      }
       
       if (results.overallStatus === 'approved') {
         setStatus({
           type: 'success',
-          message: 'Label verification complete! All checks passed.'
+          message: '✅ Label verification complete! All checks passed. Submission saved successfully.'
         });
       } else if (results.overallStatus === 'rejected') {
         setStatus({
           type: 'error',
-          message: 'Label verification failed. Please review issues below.'
+          message: '⚠️ Label verification failed. Please review issues below. Submission saved for review.'
         });
       } else {
         setStatus({
           type: 'error',
-          message: 'Label requires manual review. Some issues detected.'
+          message: '⚠️ Label requires manual review. Some issues detected. Submission saved.'
         });
       }
       
@@ -194,11 +217,17 @@ export default function VerificationForm() {
 
   return (
     <div className="w-full max-w-6xl mx-auto">
-      <StatusBanner
-        type={status.type}
-        message={status.message}
-        onClose={() => setStatus({ type: null, message: '' })}
-      />
+      {/* Only show success messages */}
+      {status.type === 'success' && status.message && (
+        <StatusBanner
+          type={status.type}
+          message={status.message}
+          onClose={() => {
+            setStatus({ type: null, message: '' });
+            setHasSubmitted(false);
+          }}
+        />
+      )}
 
       <div className="bg-white rounded-lg shadow-md border border-gray-200 p-8">
         <div className="mb-6">
@@ -210,15 +239,20 @@ export default function VerificationForm() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Left Column - Form Fields */}
             <div className="space-y-6">
-              {/* Product Category Selection - Custom Component */}
-              <CategorySelector
-                value={formData.productCategory}
-                onChange={handleCategoryChange}
-              />
+              {/* Product Category Selection - Fluid Dropdown */}
+              <div>
+                <label className="block text-sm font-semibold text-[#212529] mb-3">
+                  Select Product Category <span className="text-[#d9534f]">*</span>
+                </label>
+                <ProductCategoryDropdown
+                  value={formData.productCategory}
+                  onChange={handleCategoryChange}
+                />
+              </div>
 
               {formData.productCategory && (
                 <div className="space-y-6 animate-fadeIn">
@@ -495,7 +529,7 @@ export default function VerificationForm() {
             {/* Right Column - Image Upload */}
             <div className={`${!formData.productCategory ? 'opacity-50 pointer-events-none' : 'animate-slideInRight'}`}>
               <ImageUpload
-                onImageSelect={setSelectedImage}
+                onImageSelect={handleImageSelect}
                 selectedImage={selectedImage}
               />
               {!formData.productCategory && (
