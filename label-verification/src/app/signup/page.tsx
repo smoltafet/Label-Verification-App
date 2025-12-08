@@ -138,7 +138,7 @@ export default function SignUpPage() {
               <div>
                 <input
                   type="text"
-                  placeholder="username@ttb.gov"
+                  placeholder="pick a username"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   disabled={loading}

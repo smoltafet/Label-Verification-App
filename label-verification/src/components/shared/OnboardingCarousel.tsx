@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -41,6 +41,33 @@ interface OnboardingCarouselProps {
 export function OnboardingCarousel({ isOpen, onClose }: OnboardingCarouselProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(0);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+  const preloadedImages = useRef<HTMLImageElement[]>([]);
+
+  // Preload all images when component mounts
+  useEffect(() => {
+    const loadImages = async () => {
+      const imagePromises = steps.map((step) => {
+        return new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.src = step.image;
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+        });
+      });
+
+      try {
+        preloadedImages.current = await Promise.all(imagePromises);
+        setImagesLoaded(true);
+        console.log('✅ All carousel images preloaded');
+      } catch (error) {
+        console.error('❌ Error preloading images:', error);
+        setImagesLoaded(true); // Continue anyway
+      }
+    };
+
+    loadImages();
+  }, []);
 
   // Reset to first step when opened
   useEffect(() => {
